@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from collections import defaultdict
+import matplotlib.pyplot as plt
 
 def read_graph(file_name):
     """Читает граф из файла и нормализует индексы вершин."""
@@ -26,7 +26,11 @@ def ant_colony_optimization(graph, n_ants, n_iterations, alpha, beta, evaporatio
     pheromones = np.ones((n_nodes, n_nodes))
     best_path = None
     best_length = float('inf')
+    
+    # Хранение лучших длин за итерации
+    best_lengths_over_time = []
 
+    plt.figure()
     for iteration in range(n_iterations):
         paths = []
         lengths = []
@@ -68,15 +72,23 @@ def ant_colony_optimization(graph, n_ants, n_iterations, alpha, beta, evaporatio
             if len(path) == n_nodes:
                 path.append(path[0])
                 length = sum(graph[path[i]][path[i + 1]] for i in range(len(path) - 1))
-                paths.append(path)
-                lengths.append(length)
+            else:
+                length = None  # Маршрут не завершён, считаем недействительным
 
-        # Выбираем лучший путь
+            paths.append(path)
+            lengths.append(length)
+
+        # Удаляем недействительные маршруты
+        lengths = [l for l in lengths if l is not None]
+
+        # Обновляем лучший путь текущей итерации
         if lengths:
             min_length = min(lengths)
             if min_length < best_length:
                 best_length = min_length
                 best_path = paths[lengths.index(min_length)]
+            if min_length != float('inf'):
+                best_lengths_over_time.append(min_length)
 
         # Обновляем феромоны
         pheromones *= (1 - evaporation_rate)
@@ -86,22 +98,27 @@ def ant_colony_optimization(graph, n_ants, n_iterations, alpha, beta, evaporatio
                 pheromones[path[i]][path[i + 1]] += pheromone_deposit
                 pheromones[path[i + 1]][path[i]] += pheromone_deposit
 
-        # Выводим путь и его длину на каждой итерации
-        print(f"Итерация {iteration + 1}:")
-        print(f"Лучший путь на этой итерации: {best_path}")
-        print(f"Длина пути: {best_length}")
-        print("-" * 40)
+        # Обновляем график
+        plt.clf()
+        plt.plot(best_lengths_over_time, color='blue')
+        plt.xlabel('Итерация')
+        plt.ylabel('Длина пути')
+        plt.title('Изменение длины лучшего пути')
+        plt.grid()
+        plt.pause(0.1)
+
+    plt.show()
 
     return best_path, best_length
 
 if __name__ == "__main__":
     graph = read_graph("graph2.dat")
-    n_ants = 600
-    n_iterations = 10
+    n_ants = 10
+    n_iterations = 200
     alpha = 2.0
     beta = 4.0
-    evaporation_rate = 0.001
-    q = 0.0001
+    evaporation_rate = 0
+    q = 5
 
     best_path, best_length = ant_colony_optimization(graph, n_ants, n_iterations, alpha, beta, evaporation_rate, q)
     print("Лучший путь:", best_path)
